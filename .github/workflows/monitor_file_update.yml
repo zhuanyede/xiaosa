@@ -1,0 +1,40 @@
+name: Monitor File Update
+
+on:
+  schedule:
+    - cron: '0 * * * *' # 每小时检查一次
+
+jobs:
+  check-file-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Download new file
+        run: |
+          curl -o new_单线路.zip https://jihulab.com/fourd/FourD/-/raw/main/local/单线路.zip
+
+      - name: Compare and replace file if updated
+        run: |
+          if [ -f local/单线路.zip ]; then
+            if ! cmp -s new_单线路.zip local/单线路.zip; then
+              echo "File has been updated. Replacing old file."
+              unzip -o new_单线路.zip -d local/
+              git config --global user.name 'github-actions[bot]'
+              git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+              git add local/
+              git commit -m 'Update 单线路.zip'
+              git push
+            else
+              echo "No update."
+            fi
+          else
+            echo "First run or file does not exist. Saving new file."
+            unzip -o new_单线路.zip -d local/
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add local/
+            git commit -m 'Add 单线路.zip'
+            git push
+          fi
