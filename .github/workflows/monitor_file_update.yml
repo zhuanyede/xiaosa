@@ -1,41 +1,64 @@
-name: Monitor File Update
+name: Monitor and Download File
 
 on:
   schedule:
-    - cron: '0 * * * *' # 每小时检查一次
-  workflow_dispatch: # 手动触发
+    # 每小时运行一次
+    - cron: '0 * * * *'
+  # 保留手动触发选项
+  workflow_dispatch:
 
 jobs:
-  check-file-update:
+  check-and-download:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Download new file
+      - name: Download and extract file
         run: |
-          curl -o new_单线路.zip https://jihulab.com/fourd/FourD/-/raw/main/local/单线路.zip
-
-      - name: Compare and replace file if updated
-        run: |
-          if [ -f local/单线路.zip ]; then
-            if ! cmp -s new_单线路.zip local/单线路.zip; then
-              echo "File has been updated. Replacing old file."
-              unzip -o new_单线路.zip -d local/
-              git config --global user.name 'github-actions[bot]'
-              git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-              git add local/
-              git commit -m 'Update 单线路.zip'
-              git push
-            else
-              echo "No update."
-            fi
+          # 创建临时目录
+          mkdir -p temp
+          cd temp
+          
+          # 下载文件 (使用 -N 参数，只在文件更新时才下载)
+          wget -N --no-check-certificate "https://jihulab.com/fourd/FourD/-/raw/main/local/单线路.zip" -O file.zip
+          
+          if [ -f file.zip ]; then
+            # 解压文件到项目根目录，强制覆盖现有文件
+            unzip -o file.zip -d ../
+            echo "文件已更新并解压"
           else
-            echo "First run or file does not exist. Saving new file."
-            unzip -o new_单线路.zip -d local/
-            git config --global user.name 'github-actions[bot]'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-            git add local/
-            git commit -m 'Add 单线路.zip'
+            echo "文件下载失败或未发生更改"
+            exit 1
+          fi
+          
+          # 清理临时文件
+          cd ..
+          rm -rf temp
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 检查是否有变更
+          if git status --porcelain | grep .; then
+            git add .
+            git commit -m "Update files from jihulab (Automated)"
             git push
+            echo "变更已提交并推送"
+          else
+            echo "没有检测到文件变更"
+          fi
+
+      - name: Check workflow status
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "工作流程成功完成"
+          else
+            echo "工作流程执行出现错误"
           fi
