@@ -49,7 +49,7 @@ def get_initial_wogg_url():
         if response.status_code == 200:
             match = re.search(r'href="(https://[^"]*?wogg[^"]*?)"', response.text)
             if match:
-                initial_url = match.group(1)
+                initial_url = match.group(1).rstrip('/') 
                 print(f"从源站获取到玩偶初始链接: {initial_url}")
                 return initial_url
     except Exception as e:
