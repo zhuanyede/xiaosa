@@ -123,8 +123,8 @@ def get_wogg_url():
             
     return WOGG_DEFAULT_URL  # 如果都失败，返回默认链接
 
-def get_mogg_url():
-    """获取木偶链接"""
+def get_mogg_url(original_url=None):
+    """获取木偶链接，如果所有新域名都不可用则返回原有链接"""
     try:
         response = requests.get(TELEGRAM_MOGG_URL, timeout=10, verify=False)
         if response.status_code == 200:
@@ -153,14 +153,26 @@ def get_mogg_url():
                         print(f"域名 {url} 无法访问: {str(e)}")
                         continue
 
+                print("所有新木偶域名均不可用，保留原有链接")
+                return original_url
+
     except Exception as e:
         print(f"获取木偶链接出错: {str(e)}")
-    return None
+    return original_url
 
 def main():
     """主函数"""
     try:
         print("开始更新 URL...")
+        
+        # 读取现有的 url.json（如果存在）
+        existing_urls = {}
+        try:
+            if os.path.exists('url.json'):
+                with open('url.json', 'r', encoding='utf-8') as f:
+                    existing_urls = json.load(f)
+        except Exception as e:
+            print(f"读取现有 url.json 失败: {str(e)}")
         
         # 读取API文件
         with open('TVBoxOSC/tvbox/api.json', 'r', encoding='utf-8') as f:
@@ -179,7 +191,7 @@ def main():
         if wogg_url:
             url_data['wogg'] = wogg_url
             
-        mogg_url = get_mogg_url()
+        mogg_url = get_mogg_url(existing_urls.get('mogg'))
         if mogg_url:
             url_data['mogg'] = mogg_url
 
