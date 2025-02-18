@@ -17,17 +17,17 @@ WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 # 站点映射关系
 site_mappings = {
     '立播': 'libo',
-    '闪电': 'feimao',
+    '闪电': 'shandian',
     '欧哥': 'ouge',
     '小米': 'xiaomi',
     '多多': 'duoduo',
     '蜡笔': 'labi',
-    '至臻': 'mihdr',
-    '木偶': 'mogg',
+    '至臻': 'zhizhen',
+    '木偶': 'muou',
     '六趣': 'liuqu',
     '虎斑': 'huban',
-    '下饭': 'texiafan',
-    '玩偶': 'wogg'
+    '下饭': 'xiafan',
+    '玩偶': 'wanou'
 }
 
 def test_url_delay(url):
