@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,24 +35,70 @@ jobs:
             pip install requests urllib3
           fi
 
+      - name: Debug workspace
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "\nTVBoxOSC directory contents:"
+          ls -la TVBoxOSC/tvbox/ || echo "TVBoxOSC/tvbox/ not found"
+
       - name: Process URLs
         run: |
-          echo "开始处理 URLs..."
-          # 检查 api.json 是否存在
+          # 确保 api.json 存在并且可读
           if [ ! -f "TVBoxOSC/tvbox/api.json" ]; then
-            echo "错误: api.json 文件不存在"
+            echo "Error: api.json not found"
             exit 1
           fi
           
-          # 读取 api.json 并通过管道传递给 url.py
-          cat TVBoxOSC/tvbox/api.json | python url.py > url.json
+          echo "Creating temporary processing script..."
+          cat > process.py << 'EOF'
+          import json
+          import sys
+          
+          # 读取 api.json
+          try:
+              with open('TVBoxOSC/tvbox/api.json', 'r', encoding='utf-8') as f:
+                  api_content = f.read()
+          
+              # 通过管道传递给 url.py 并捕获输出
+              import subprocess
+              result = subprocess.run(['python', 'url.py'], 
+                                   input=api_content.encode('utf-8'),
+                                   capture_output=True,
+                                   text=True)
+              
+              if result.returncode == 0 and result.stdout:
+                  # 确保输出是有效的 JSON
+                  try:
+                      data = json.loads(result.stdout)
+                      # 写入到 url.json
+                      with open('url.json', 'w', encoding='utf-8') as f:
+                          json.dump(data, f, ensure_ascii=False, indent=2)
+                      print("Successfully created url.json")
+                  except json.JSONDecodeError:
+                      print("Error: Invalid JSON output from url.py")
+                      print("Output was:", result.stdout)
+                      sys.exit(1)
+              else:
+                  print("Error running url.py:")
+                  print("stdout:", result.stdout)
+                  print("stderr:", result.stderr)
+                  sys.exit(1)
+          
+          except Exception as e:
+              print(f"Error: {str(e)}")
+              sys.exit(1)
+          EOF
+          
+          echo "Running processing script..."
+          python process.py
           
           # 验证 url.json 是否创建成功
           if [ -f url.json ]; then
-            echo "url.json 创建成功:"
+            echo "url.json was created successfully:"
             cat url.json
           else
-            echo "错误: 未能创建 url.json"
+            echo "Error: url.json was not created"
             exit 1
           fi
 
@@ -61,13 +107,13 @@ jobs:
         run: |
           if [ -f url.json ]; then
             if git diff --quiet url.json; then
-              echo "url.json 没有变化"
+              echo "No changes in url.json"
             else
               echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "检测到 url.json 有更新"
+              echo "Changes detected in url.json"
             fi
           else
-            echo "错误: 找不到 url.json"
+            echo "Error: url.json not found"
             exit 1
           fi
 
@@ -77,7 +123,7 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add url.json
-          git commit -m "自动更新 URLs: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          git commit -m "Auto Update URLs: $(date -u '+%Y-%m-%d %H:%M:%S')"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
