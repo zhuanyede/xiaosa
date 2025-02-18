@@ -30,7 +30,7 @@ site_mappings = {
     '虎斑': 'huban',
     '下饭': 'xiafan',
     '玩偶': 'wanou',
-    '星剧社': 'xjs'
+    '星剧社': 'star2'
 }
 
 def test_url_delay(url):
