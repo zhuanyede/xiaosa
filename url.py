@@ -23,7 +23,7 @@ site_mappings = {
     '多多': 'duoduo',
     '蜡笔': 'labi',
     '至臻': 'zhizhen',
-    '木偶': 'muou',
+    '木偶': 'mogg',
     '六趣': 'liuqu',
     '虎斑': 'huban',
     '下饭': 'xiafan',
