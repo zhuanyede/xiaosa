@@ -16,10 +16,13 @@ TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
 WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 
 # 文件路径定义
-BASE_DIR = "/mnt/usb1-0/h5ai/tvbox"
-api_path = '/mnt/usb1-0/h5ai/tvbox/TVBoxOSC/tvbox/api.json'
-save_dir = '/mnt/usb1-0/h5ai/tvbox/脚本'
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))  # 获取脚本所在目录(仓库根目录)
+api_path = os.path.join(REPO_ROOT, 'TVBoxOSC/tvbox/api.json')
+save_dir = REPO_ROOT  # 保存到仓库根目录
 url_json_path = os.path.join(save_dir, 'url.json')
+
+# 确保保存目录存在
+os.makedirs(save_dir, exist_ok=True)
 
 def get_mogg_domains_from_telegram():
     """从Telegram频道获取木偶域名列表"""
