@@ -168,7 +168,7 @@ def main():
         # 获取星剧社链接
         xjs_url = get_xjs_url()
         if xjs_url:
-            url_data['xjs'] = xjs_url
+            url_data['star2'] = xjs_url
             print(f"添加星剧社链接: {xjs_url}")
         
         # 获取玩偶和木偶链接
