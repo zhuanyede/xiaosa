@@ -17,12 +17,18 @@ WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 
 # 文件路径定义
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))  # 获取脚本所在目录(仓库根目录)
-api_path = os.path.join(REPO_ROOT, 'TVBoxOSC/tvbox/api.json')
-save_dir = REPO_ROOT  # 保存到仓库根目录
-url_json_path = os.path.join(save_dir, 'url.json')
 
-# 确保保存目录存在
-os.makedirs(save_dir, exist_ok=True)
+# 打印当前工作目录和脚本位置，用于调试
+print(f"当前工作目录: {os.getcwd()}")
+print(f"脚本位置: {REPO_ROOT}")
+
+# 构建文件路径
+api_path = os.path.join(REPO_ROOT, 'TVBoxOSC/tvbox/api.json')
+url_json_path = os.path.join(REPO_ROOT, 'url.json')
+
+# 验证文件路径
+print(f"API文件路径: {api_path}")
+print(f"URL JSON将保存到: {url_json_path}")
 
 def get_mogg_domains_from_telegram():
     """从Telegram频道获取木偶域名列表"""
@@ -208,73 +214,87 @@ site_mappings = {
     '玩偶': 'wogg'
 }
 
-print("=== 从API提取URL ===")
-
-try:
-    # 读取 api.json
-    with open(api_path, 'r', encoding='utf-8') as f:
-        api_data = json.load(f)
-        print("成功读取API文件")
-
-    # 提取站点信息
-    found_sites = []
-    sites = api_data.get('sites', [])
-    print(f"找到 {len(sites)} 个站点配置")
-
-    # 首先获取玩偶链接和木偶链接
-    wogg_url = get_wogg_url()
-    mogg_url = get_mogg_url()
+def main():
+    print("=== 从API提取URL ===")
     
-    if wogg_url:
-        print(f"找到玩偶链接: {wogg_url}")
-        found_sites.append(f"玩偶：{wogg_url}")
-    
-    if mogg_url:
-        print(f"找到木偶链接: {mogg_url}")
-        found_sites.append(f"木偶：{mogg_url}")
+    try:
+        # 确保API文件存在
+        if not os.path.exists(api_path):
+            raise FileNotFoundError(f"找不到API文件: {api_path}")
 
-    # 然后处理其他站点
-    for site in sites:
-        name = site.get('name', '')
-        if '弹幕' in name:
-            display_name = None
-            for key in site_mappings.keys():
-                if key in name and key not in ['木偶', '玩偶']:
-                    display_name = key
-                    break
-            
-            if display_name:
-                ext = site.get('ext', {})
-                site_url = ''
-                if isinstance(ext, dict):
-                    site_url = ext.get('site', '')
-                elif isinstance(ext, str):
-                    site_url = ext
-                
-                if site_url and site_url.startswith('http'):
-                    print(f"找到匹配: {display_name} -> {site_url}")
-                    found_sites.append(f"{display_name}：{site_url}")
+        # 读取 api.json
+        with open(api_path, 'r', encoding='utf-8') as f:
+            api_data = json.load(f)
+            print("成功读取API文件")
 
-    # 将结果写入 url.json
-    if found_sites:
-        # 转换数据为字典格式，使用英文键名
-        url_data = {}
-        for site in found_sites:
-            cn_name, url = site.split('：')
-            # 使用site_mappings中的英文名作为键名
-            if cn_name in site_mappings:
-                url_data[site_mappings[cn_name]] = url.strip()
-            
-        # 写入 JSON 文件
-        with open(url_json_path, 'w', encoding='utf-8') as f:
-            json.dump(url_data, f, ensure_ascii=False, indent=2)
-        print(f"\n成功提取 {len(found_sites)} 个站点信息到: {url_json_path}")
+        # 提取站点信息
+        found_sites = []
+        sites = api_data.get('sites', [])
+        print(f"找到 {len(sites)} 个站点配置")
+
+        # 首先获取玩偶链接和木偶链接
+        wogg_url = get_wogg_url()
+        mogg_url = get_mogg_url()
         
-        # 为控制台显示准备可读的输出
-        reverse_mappings = {v: k for k, v in site_mappings.items()}
-        print("\n当前可用链接:")
-        for k, v in url_data.items():
-            print(f"{reverse_mappings.get(k, k)}：{v}")
+        if wogg_url:
+            print(f"找到玩偶链接: {wogg_url}")
+            found_sites.append(f"玩偶：{wogg_url}")
+        
+        if mogg_url:
+            print(f"找到木偶链接: {mogg_url}")
+            found_sites.append(f"木偶：{mogg_url}")
 
-except Exception as e:
-    print(f"❌ URL同步过程中出现错误：{str(e)}")
+        # 然后处理其他站点
+        for site in sites:
+            name = site.get('name', '')
+            if '弹幕' in name:
+                display_name = None
+                for key in site_mappings.keys():
+                    if key in name and key not in ['木偶', '玩偶']:
+                        display_name = key
+                        break
+                
+                if display_name:
+                    ext = site.get('ext', {})
+                    site_url = ''
+                    if isinstance(ext, dict):
+                        site_url = ext.get('site', '')
+                    elif isinstance(ext, str):
+                        site_url = ext
+                    
+                    if site_url and site_url.startswith('http'):
+                        print(f"找到匹配: {display_name} -> {site_url}")
+                        found_sites.append(f"{display_name}：{site_url}")
+
+        # 将结果写入 url.json
+        if found_sites:
+            # 转换数据为字典格式，使用英文键名
+            url_data = {}
+            for site in found_sites:
+                cn_name, url = site.split('：')
+                # 使用site_mappings中的英文名作为键名
+                if cn_name in site_mappings:
+                    url_data[site_mappings[cn_name]] = url.strip()
+            
+            # 写入 JSON 文件
+            with open(url_json_path, 'w', encoding='utf-8') as f:
+                json.dump(url_data, f, ensure_ascii=False, indent=2)
+            print(f"\n成功提取 {len(found_sites)} 个站点信息到: {url_json_path}")
+            
+            # 验证文件是否成功创建
+            if os.path.exists(url_json_path):
+                print(f"确认: url.json 已成功创建在 {url_json_path}")
+                # 为控制台显示准备可读的输出
+                reverse_mappings = {v: k for k, v in site_mappings.items()}
+                print("\n当前可用链接:")
+                for k, v in url_data.items():
+                    print(f"{reverse_mappings.get(k, k)}：{v}")
+            else:
+                print("警告: url.json 似乎没有被正确创建")
+
+    except Exception as e:
+        print(f"❌ URL同步过程中出现错误：{str(e)}")
+        raise
+
+if __name__ == "__main__":
+    main()
