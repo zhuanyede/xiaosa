@@ -12,6 +12,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 # URL配置
 WOGG_SOURCE_URL = "https://www.xn--sss604efuw.com/"
+WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
 
 # 站点映射关系
@@ -53,12 +54,13 @@ def get_initial_wogg_url():
                 return initial_url
     except Exception as e:
         print(f"获取玩偶初始链接失败: {str(e)}")
-    return "https://wogg.xxooo.cf"
+    return WOGG_DEFAULT_URL
 
 def get_wogg_url():
     """获取玩偶链接并测试延迟"""
+    initial_url = get_initial_wogg_url()
+    
     try:
-        initial_url = get_initial_wogg_url()
         response = requests.get(initial_url, verify=False)
         if response.status_code == 200:
             domains = []
@@ -87,7 +89,22 @@ def get_wogg_url():
 
     except Exception as e:
         print(f"获取玩偶链接出错: {str(e)}")
-    return initial_url  # 如果出错，直接返回初始链接
+        print("开始对比初始链接和默认链接的延迟...")
+        
+        initial_delay = test_url_delay(initial_url)
+        default_delay = test_url_delay(WOGG_DEFAULT_URL)
+        
+        print(f"初始链接延迟: {initial_delay:.3f}秒" if initial_delay else "初始链接不可用")
+        print(f"默认链接延迟: {default_delay:.3f}秒" if default_delay else "默认链接不可用")
+        
+        if initial_delay and default_delay:
+            return initial_url if initial_delay < default_delay else WOGG_DEFAULT_URL
+        elif initial_delay:
+            return initial_url
+        elif default_delay:
+            return WOGG_DEFAULT_URL
+            
+    return WOGG_DEFAULT_URL  # 如果都失败，返回默认链接
 
 def get_mogg_url():
     """获取木偶链接"""
