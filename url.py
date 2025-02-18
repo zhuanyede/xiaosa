@@ -11,8 +11,8 @@ from urllib3.exceptions import InsecureRequestWarning
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
 # URL配置
+WOGG_SOURCE_URL = "https://www.xn--sss604efuw.com/"
 TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
-WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 
 # 站点映射关系
 site_mappings = {
@@ -41,10 +41,25 @@ def test_url_delay(url):
     except:
         return None
 
+def get_initial_wogg_url():
+    """从源站获取玩偶初始链接"""
+    try:
+        response = requests.get(WOGG_SOURCE_URL, verify=False)
+        if response.status_code == 200:
+            match = re.search(r'href="(https://[^"]*?wogg[^"]*?)"', response.text)
+            if match:
+                initial_url = match.group(1)
+                print(f"从源站获取到玩偶初始链接: {initial_url}")
+                return initial_url
+    except Exception as e:
+        print(f"获取玩偶初始链接失败: {str(e)}")
+    return "https://wogg.xxooo.cf"
+
 def get_wogg_url():
     """获取玩偶链接并测试延迟"""
     try:
-        response = requests.get(WOGG_DEFAULT_URL, verify=False)
+        initial_url = get_initial_wogg_url()
+        response = requests.get(initial_url, verify=False)
         if response.status_code == 200:
             domains = []
             notice_match = re.search(r'<div class="popup-main">(.*?)</div>', response.text, re.DOTALL)
@@ -53,25 +68,26 @@ def get_wogg_url():
                 for pattern in [r'域名\s+((?:www\.)?wogg\.[a-z.]+)', r'备用\s+((?:www\.)?wogg\.[a-z.]+)']:
                     domains.extend(re.findall(pattern, notice_match.group(1)))
 
-            domains = list(dict.fromkeys(domains + ['wogg.xxooo.cf']))
+            domains = list(dict.fromkeys(domains))
             print("找到玩偶域名:", domains)
 
             best_delay = float('inf')
-            best_url = WOGG_DEFAULT_URL
+            best_url = initial_url
 
-            for domain in domains:
-                url = f"https://{domain.strip('/')}"
-                delay = test_url_delay(url)
-                if delay and delay < best_delay:
-                    best_delay = delay
-                    best_url = url
-                    print(f"更新最佳域名: {url} (延迟: {delay:.3f}秒)")
+            if domains:  # 只有在找到其他域名时才进行测试
+                for domain in domains:
+                    url = f"https://{domain.strip('/')}"
+                    delay = test_url_delay(url)
+                    if delay and delay < best_delay:
+                        best_delay = delay
+                        best_url = url
+                        print(f"更新最佳域名: {url} (延迟: {delay:.3f}秒)")
 
             return best_url
 
     except Exception as e:
         print(f"获取玩偶链接出错: {str(e)}")
-    return WOGG_DEFAULT_URL
+    return initial_url  # 如果出错，直接返回初始链接
 
 def get_mogg_url():
     """获取木偶链接"""
