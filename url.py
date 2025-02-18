@@ -14,6 +14,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 WOGG_SOURCE_URL = "https://www.xn--sss604efuw.com/"
 WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
+XJS_SOURCE_URL = "https://mlink.cc/520TV"
 
 # 站点映射关系
 site_mappings = {
@@ -28,7 +29,8 @@ site_mappings = {
     '六趣': 'liuqu',
     '虎斑': 'huban',
     '下饭': 'xiafan',
-    '玩偶': 'wanou'
+    '玩偶': 'wanou',
+    '星剧社': 'xjs'
 }
 
 def test_url_delay(url):
@@ -41,6 +43,21 @@ def test_url_delay(url):
         return None
     except:
         return None
+
+def get_xjs_url():
+    """从源站获取星剧社链接"""
+    try:
+        response = requests.get(XJS_SOURCE_URL, verify=False)
+        if response.status_code == 200:
+            # 查找包含star2.cn的域名
+            match = re.search(r'https?://[^"\'\s<>]+?star2\.cn[^"\'\s<>]*', response.text)
+            if match:
+                url = match.group(0)
+                print(f"找到星剧社域名: {url}")
+                return url.rstrip('/')
+    except Exception as e:
+        print(f"获取星剧社链接失败: {str(e)}")
+    return None
 
 def get_initial_wogg_url():
     """从源站获取玩偶初始链接"""
@@ -148,6 +165,12 @@ def main():
 
         url_data = {}
         
+        # 获取星剧社链接
+        xjs_url = get_xjs_url()
+        if xjs_url:
+            url_data['xjs'] = xjs_url
+            print(f"添加星剧社链接: {xjs_url}")
+        
         # 获取玩偶和木偶链接
         wogg_url = get_wogg_url()
         if wogg_url:
@@ -162,7 +185,7 @@ def main():
             name = site.get('name', '')
             if '弹幕' in name:
                 for cn_name, en_name in site_mappings.items():
-                    if cn_name in name and cn_name not in ['木偶', '玩偶']:
+                    if cn_name in name and cn_name not in ['木偶', '玩偶', '星剧社']:
                         ext = site.get('ext', {})
                         site_url = ext.get('site', '') if isinstance(ext, dict) else ext
                         if site_url and site_url.startswith('http'):
