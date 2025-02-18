@@ -30,64 +30,6 @@ site_mappings = {
     '玩偶': 'wogg'
 }
 
-def get_mogg_domains_from_telegram():
-    """从Telegram频道获取木偶域名列表"""
-    try:
-        session = requests.Session()
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-        session.headers.update(headers)
-
-        # 关闭SSL验证，添加重试机制
-        retry_count = 3
-        for i in range(retry_count):
-            try:
-                response = session.get(
-                    TELEGRAM_MOGG_URL,
-                    timeout=10,
-                    verify=False,
-                    headers=headers
-                )
-                if response.status_code == 200:
-                    content = response.text
-                    print(f"成功获取到内容，长度: {len(content)}")
-                    break
-            except requests.exceptions.SSLError:
-                print(f"SSL错误，尝试第 {i+1}/{retry_count} 次重试")
-                if i == retry_count - 1:
-                    print("所有重试失败，无法获取木偶域名")
-                    return None
-                time.sleep(1)
-            except Exception as e:
-                print(f"请求失败: {str(e)}")
-                continue
-
-        if 'response' in locals() and response.status_code == 200:
-            patterns = [
-                r'(?:https?://)?([a-zA-Z0-9.-]+\.91muou\.icu)',
-                r'(?:https?://)?([a-zA-Z0-9.-]+\.666291\.xyz)',
-                r'(?:https?://)?([a-zA-Z0-9.-]+\.muouso\.fun)'
-            ]
-            
-            domains = []
-            for pattern in patterns:
-                matches = re.findall(pattern, content, re.IGNORECASE)
-                domains.extend(matches)
-            
-            domains = list(dict.fromkeys(domains))
-            
-            if domains:
-                print(f"从Telegram获取到木偶域名: {domains}")
-                return domains
-            else:
-                print("未在消息中找到有效的木偶域名")
-                return None
-    except Exception as e:
-        print(f"访问Telegram出错: {str(e)}")
-    
-    return None
-
 def test_url_delay(url):
     """测试URL的延迟"""
     try:
@@ -105,141 +47,108 @@ def get_wogg_url():
         response = requests.get(WOGG_DEFAULT_URL, verify=False)
         if response.status_code == 200:
             domains = []
-            notice_pattern = r'<div class="popup-main">(.*?)</div>'
-            notice_match = re.search(notice_pattern, response.text, re.DOTALL)
+            notice_match = re.search(r'<div class="popup-main">(.*?)</div>', response.text, re.DOTALL)
             
             if notice_match:
-                domain_patterns = [
-                    r'域名\s+((?:www\.)?wogg\.[a-z.]+)',
-                    r'备用\s+((?:www\.)?wogg\.[a-z.]+)'
-                ]
-                
-                for pattern in domain_patterns:
-                    matches = re.findall(pattern, notice_match.group(1))
-                    domains.extend([match.strip() for match in matches])
+                for pattern in [r'域名\s+((?:www\.)?wogg\.[a-z.]+)', r'备用\s+((?:www\.)?wogg\.[a-z.]+)']:
+                    domains.extend(re.findall(pattern, notice_match.group(1)))
 
-            domains = list(dict.fromkeys(domains))
-            if 'wogg.xxooo.cf' not in domains:
-                domains.append('wogg.xxooo.cf')
+            domains = list(dict.fromkeys(domains + ['wogg.xxooo.cf']))
+            print("找到玩偶域名:", domains)
 
-            print("收集到的玩偶域名:", domains)
+            best_delay = float('inf')
+            best_url = WOGG_DEFAULT_URL
 
-            delay_results = []
             for domain in domains:
                 url = f"https://{domain.strip('/')}"
-                try:
-                    delay = test_url_delay(url)
-                    if delay:
-                        delay_results.append((url, delay))
-                        print(f"测试域名 {url} 延迟: {delay:.3f}秒")
-                except Exception as e:
-                    print(f"测试域名 {url} 时出错: {str(e)}")
+                delay = test_url_delay(url)
+                if delay and delay < best_delay:
+                    best_delay = delay
+                    best_url = url
+                    print(f"更新最佳域名: {url} (延迟: {delay:.3f}秒)")
 
-            if delay_results:
-                delay_results.sort(key=lambda x: x[1])
-                best_url, best_delay = delay_results[0]
-                print(f"\n选择延迟最低的域名: {best_url} ({best_delay:.3f}秒)")
-                return best_url
+            return best_url
 
     except Exception as e:
-        print(f"获取玩偶链接失败: {str(e)}")
-    
+        print(f"获取玩偶链接出错: {str(e)}")
     return WOGG_DEFAULT_URL
 
 def get_mogg_url():
-    """获取木偶链接并测试延迟"""
+    """获取木偶链接"""
     try:
-        domains = get_mogg_domains_from_telegram()
-        if domains:
-            delay_results = []
-            for domain in domains:
-                url = f"https://{domain}" if not domain.startswith('http') else domain
-                delay = test_url_delay(url)
-                if delay:
-                    delay_results.append((url.rstrip('/'), delay))
-                    print(f"测试木偶域名 {url} 延迟: {delay:.3f}秒")
+        response = requests.get(TELEGRAM_MOGG_URL, timeout=10, verify=False)
+        if response.status_code == 200:
+            domains = []
+            for pattern in [r'(?:https?://)?([a-zA-Z0-9.-]+\.91muou\.icu)', 
+                          r'(?:https?://)?([a-zA-Z0-9.-]+\.666291\.xyz)',
+                          r'(?:https?://)?([a-zA-Z0-9.-]+\.muouso\.fun)']:
+                domains.extend(re.findall(pattern, response.text, re.IGNORECASE))
 
-            if delay_results:
-                delay_results.sort(key=lambda x: x[1])
-                best_url, best_delay = delay_results[0]
-                print(f"\n选择延迟最低的域名: {best_url} ({best_delay:.3f}秒)")
+            domains = list(dict.fromkeys(domains))
+            if domains:
+                print("找到木偶域名:", domains)
+                best_delay = float('inf')
+                best_url = None
+
+                for domain in domains:
+                    url = f"https://{domain}"
+                    delay = test_url_delay(url)
+                    if delay and delay < best_delay:
+                        best_delay = delay
+                        best_url = url
+                        print(f"更新最佳域名: {url} (延迟: {delay:.3f}秒)")
+
                 return best_url
 
     except Exception as e:
-        print(f"获取木偶链接失败: {str(e)}")
-    
+        print(f"获取木偶链接出错: {str(e)}")
     return None
 
 def main():
-    """主函数：读取API并生成URL JSON"""
+    """主函数"""
     try:
-        # 确保工作目录正确
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(script_dir)
-        
-        print(f"当前工作目录: {os.getcwd()}")
+        print("开始更新 URL...")
         
         # 读取API文件
-        api_path = os.path.join('TVBoxOSC', 'tvbox', 'api.json')
-        if not os.path.exists(api_path):
-            print(f"错误: 找不到API文件: {api_path}")
-            return False
-
-        with open(api_path, 'r', encoding='utf-8') as f:
+        with open('TVBoxOSC/tvbox/api.json', 'r', encoding='utf-8') as f:
             api_data = json.load(f)
 
-        # 获取站点信息
-        found_sites = []
-        sites = api_data.get('sites', [])
-        print(f"找到 {len(sites)} 个站点配置")
-
-        # 获取特殊站点链接
+        url_data = {}
+        
+        # 获取玩偶和木偶链接
         wogg_url = get_wogg_url()
-        mogg_url = get_mogg_url()
-        
         if wogg_url:
-            print(f"找到玩偶链接: {wogg_url}")
-            found_sites.append(f"玩偶：{wogg_url}")
-        
+            url_data['wogg'] = wogg_url
+            
+        mogg_url = get_mogg_url()
         if mogg_url:
-            print(f"找到木偶链接: {mogg_url}")
-            found_sites.append(f"木偶：{mogg_url}")
+            url_data['mogg'] = mogg_url
 
         # 处理其他站点
-        for site in sites:
+        for site in api_data.get('sites', []):
             name = site.get('name', '')
             if '弹幕' in name:
-                for key in site_mappings:
-                    if key in name and key not in ['木偶', '玩偶']:
+                for cn_name, en_name in site_mappings.items():
+                    if cn_name in name and cn_name not in ['木偶', '玩偶']:
                         ext = site.get('ext', {})
                         site_url = ext.get('site', '') if isinstance(ext, dict) else ext
-                        
                         if site_url and site_url.startswith('http'):
-                            print(f"找到匹配: {key} -> {site_url}")
-                            found_sites.append(f"{key}：{site_url}")
+                            url_data[en_name] = site_url.strip()
+                            print(f"添加 {cn_name} 链接: {site_url}")
                         break
 
-        # 生成URL数据
-        if found_sites:
-            url_data = {}
-            for site in found_sites:
-                cn_name, url = site.split('：')
-                if cn_name in site_mappings:
-                    url_data[site_mappings[cn_name]] = url.strip()
-
-            # 写入结果
+        # 保存结果
+        if url_data:
             with open('url.json', 'w', encoding='utf-8') as f:
                 json.dump(url_data, f, ensure_ascii=False, indent=2)
-            
-            print(f"\n成功生成 url.json，包含 {len(url_data)} 个站点:")
-            print(json.dumps(url_data, ensure_ascii=False, indent=2))
+            print(f"成功更新 {len(url_data)} 个链接")
             return True
-
-        print("未找到任何有效站点")
+            
+        print("未找到任何有效链接")
         return False
 
     except Exception as e:
-        print(f"处理过程中出错: {str(e)}")
+        print(f"更新过程出错: {str(e)}")
         return False
 
 if __name__ == "__main__":
