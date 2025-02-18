@@ -2,8 +2,8 @@ name: Update URLs
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:  # 允许手动触发
   push:
     paths:
       - 'TVBoxOSC/tvbox/api.json'
@@ -18,19 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 获取完整历史记录
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
-
-      - name: Show initial workspace
-        run: |
-          echo "Initial workspace state:"
-          pwd
-          ls -la
 
       - name: Install dependencies
         run: |
@@ -41,37 +35,24 @@ jobs:
             pip install requests urllib3
           fi
 
-      - name: Run URL update script
+      - name: Process URLs
         run: |
-          echo "Current directory before running script: $(pwd)"
-          echo "Directory contents:"
-          ls -la
-          
-          # 运行脚本并捕获输出
-          python url.py
-          
-          echo "After script execution:"
-          ls -la
-          
-          # 验证 url.json 是否创建
-          if [ -f url.json ]; then
-            echo "url.json was created successfully in $(pwd):"
-            cat url.json
-          else
-            echo "Error: url.json was not created in $(pwd)!"
-            find . -name url.json  # 搜索url.json文件
+          echo "开始处理 URLs..."
+          # 检查 api.json 是否存在
+          if [ ! -f "TVBoxOSC/tvbox/api.json" ]; then
+            echo "错误: api.json 文件不存在"
             exit 1
           fi
-
-      - name: Verify file location
-        run: |
-          if [ -f "url.json" ]; then
-            echo "url.json found in root directory"
-            echo "Content of url.json:"
+          
+          # 读取 api.json 并通过管道传递给 url.py
+          cat TVBoxOSC/tvbox/api.json | python url.py > url.json
+          
+          # 验证 url.json 是否创建成功
+          if [ -f url.json ]; then
+            echo "url.json 创建成功:"
             cat url.json
           else
-            echo "Error: url.json not found in root directory"
-            find . -name url.json
+            echo "错误: 未能创建 url.json"
             exit 1
           fi
 
@@ -79,9 +60,14 @@ jobs:
         id: check_changes
         run: |
           if [ -f url.json ]; then
-            git diff --quiet url.json || echo "has_changes=true" >> $GITHUB_OUTPUT
+            if git diff --quiet url.json; then
+              echo "url.json 没有变化"
+            else
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "检测到 url.json 有更新"
+            fi
           else
-            echo "Error: url.json not found!"
+            echo "错误: 找不到 url.json"
             exit 1
           fi
 
@@ -91,7 +77,7 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add url.json
-          git commit -m "Auto Update URLs: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          git commit -m "自动更新 URLs: $(date -u '+%Y-%m-%d %H:%M:%S')"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
