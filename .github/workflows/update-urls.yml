@@ -2,8 +2,8 @@ name: Update URLs
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次
-  workflow_dispatch:  # 允许手动触发
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
   push:
     paths:
       - 'TVBoxOSC/tvbox/api.json'
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史以确保正确的git操作
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,18 +26,11 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Show workspace structure
+      - name: Show initial workspace
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
+          echo "Initial workspace state:"
+          pwd
           ls -la
-          echo "Checking for requirements.txt:"
-          if [ -f "requirements.txt" ]; then
-            echo "requirements.txt found"
-            cat requirements.txt
-          else
-            echo "requirements.txt not found"
-          fi
 
       - name: Install dependencies
         run: |
@@ -45,21 +38,40 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           else
-            echo "Installing basic requirements..."
             pip install requests urllib3
           fi
 
       - name: Run URL update script
         run: |
-          echo "Starting URL update process..."
+          echo "Current directory before running script: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          
+          # 运行脚本并捕获输出
           python url.py
+          
           echo "After script execution:"
           ls -la
+          
+          # 验证 url.json 是否创建
           if [ -f url.json ]; then
-            echo "url.json was created successfully:"
+            echo "url.json was created successfully in $(pwd):"
             cat url.json
           else
-            echo "Error: url.json was not created!"
+            echo "Error: url.json was not created in $(pwd)!"
+            find . -name url.json  # 搜索url.json文件
+            exit 1
+          fi
+
+      - name: Verify file location
+        run: |
+          if [ -f "url.json" ]; then
+            echo "url.json found in root directory"
+            echo "Content of url.json:"
+            cat url.json
+          else
+            echo "Error: url.json not found in root directory"
+            find . -name url.json
             exit 1
           fi
 
@@ -67,14 +79,9 @@ jobs:
         id: check_changes
         run: |
           if [ -f url.json ]; then
-            if git diff --quiet url.json; then
-              echo "No changes in url.json"
-            else
-              echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "Changes detected in url.json"
-            fi
+            git diff --quiet url.json || echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "Error: url.json does not exist!"
+            echo "Error: url.json not found!"
             exit 1
           fi
 
@@ -95,4 +102,4 @@ jobs:
         with:
           name: url-json
           path: url.json
-          if-no-files-found: error
+          if-no-files-found: warn
