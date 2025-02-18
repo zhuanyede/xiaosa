@@ -137,18 +137,21 @@ def get_mogg_url():
             domains = list(dict.fromkeys(domains))
             if domains:
                 print("找到木偶域名:", domains)
-                best_delay = float('inf')
-                best_url = None
-
+                
+                # 测试每个域名是否可以访问
                 for domain in domains:
                     url = f"https://{domain}"
-                    delay = test_url_delay(url)
-                    if delay and delay < best_delay:
-                        best_delay = delay
-                        best_url = url
-                        print(f"更新最佳域名: {url} (延迟: {delay:.3f}秒)")
-
-                return best_url
+                    try:
+                        # 设置较短的超时时间，测试网页是否能正常加载
+                        response = requests.get(url, timeout=3, verify=False)
+                        if response.status_code == 200:
+                            # 检查是否包含特定内容以验证是否为有效的木偶站点
+                            if '木偶' in response.text or '影视' in response.text:
+                                print(f"找到可用的木偶域名: {url}")
+                                return url
+                    except Exception as e:
+                        print(f"域名 {url} 无法访问: {str(e)}")
+                        continue
 
     except Exception as e:
         print(f"获取木偶链接出错: {str(e)}")
