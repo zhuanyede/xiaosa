@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import json
-import os
-import base64
 import re
 import time
 import requests
@@ -15,16 +13,21 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
 WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 
-# 文件路径定义
-REPO_ROOT = os.getcwd()  # 使用当前工作目录作为根目录
-print(f"当前工作目录 (REPO_ROOT): {REPO_ROOT}")
-
-# 构建文件路径
-api_path = os.path.join(REPO_ROOT, 'TVBoxOSC', 'tvbox', 'api.json')
-url_json_path = os.path.join(REPO_ROOT, 'url.json')
-
-print(f"API 文件路径: {api_path}")
-print(f"URL JSON 将保存到: {url_json_path}")
+# 站点映射关系
+site_mappings = {
+    '立播': 'libo',
+    '闪电': 'feimao',
+    '欧哥': 'ouge',
+    '小米': 'xiaomi',
+    '多多': 'duoduo',
+    '蜡笔': 'labi',
+    '至臻': 'mihdr',
+    '木偶': 'mogg',
+    '六趣': 'liuqu',
+    '虎斑': 'huban',
+    '下饭': 'texiafan',
+    '玩偶': 'wogg'
+}
 
 def get_mogg_domains_from_telegram():
     """从Telegram频道获取木偶域名列表"""
@@ -194,41 +197,16 @@ def get_mogg_url():
     
     return None
 
-# 站点映射关系
-site_mappings = {
-    '立播': 'libo',
-    '闪电': 'feimao',
-    '欧哥': 'ouge',
-    '小米': 'xiaomi',
-    '多多': 'duoduo',
-    '蜡笔': 'labi',
-    '至臻': 'mihdr',
-    '木偶': 'mogg',
-    '六趣': 'liuqu',
-    '虎斑': 'huban',
-    '下饭': 'texiafan',
-    '玩偶': 'wogg'
-}
-
-def main():
-    print("=== 从API提取URL ===")
-    
+def get_urls(api_content):
+    """从API内容获取URL数据"""
     try:
-        # 确保API文件存在
-        if not os.path.exists(api_path):
-            raise FileNotFoundError(f"找不到API文件: {api_path}")
-
-        # 读取 api.json
-        with open(api_path, 'r', encoding='utf-8') as f:
-            api_data = json.load(f)
-            print("成功读取API文件")
-
-        # 提取站点信息
+        # 解析API内容
+        api_data = json.loads(api_content)
         found_sites = []
         sites = api_data.get('sites', [])
         print(f"找到 {len(sites)} 个站点配置")
 
-        # 首先获取玩偶链接和木偶链接
+        # 获取玩偶链接和木偶链接
         wogg_url = get_wogg_url()
         mogg_url = get_mogg_url()
         
@@ -240,7 +218,7 @@ def main():
             print(f"找到木偶链接: {mogg_url}")
             found_sites.append(f"木偶：{mogg_url}")
 
-        # 然后处理其他站点
+        # 处理其他站点
         for site in sites:
             name = site.get('name', '')
             if '弹幕' in name:
@@ -262,35 +240,24 @@ def main():
                         print(f"找到匹配: {display_name} -> {site_url}")
                         found_sites.append(f"{display_name}：{site_url}")
 
-        # 将结果写入 url.json
-        if found_sites:
-            # 转换数据为字典格式，使用英文键名
-            url_data = {}
-            for site in found_sites:
-                cn_name, url = site.split('：')
-                # 使用site_mappings中的英文名作为键名
-                if cn_name in site_mappings:
-                    url_data[site_mappings[cn_name]] = url.strip()
-            
-            # 写入 JSON 文件
-            with open(url_json_path, 'w', encoding='utf-8') as f:
-                json.dump(url_data, f, ensure_ascii=False, indent=2)
-            print(f"\n成功提取 {len(found_sites)} 个站点信息到: {url_json_path}")
-            
-            # 验证文件是否成功创建
-            if os.path.exists(url_json_path):
-                print(f"确认: url.json 已成功创建在 {url_json_path}")
-                # 为控制台显示准备可读的输出
-                reverse_mappings = {v: k for k, v in site_mappings.items()}
-                print("\n当前可用链接:")
-                for k, v in url_data.items():
-                    print(f"{reverse_mappings.get(k, k)}：{v}")
-            else:
-                print("警告: url.json 似乎没有被正确创建")
+        # 转换数据为字典格式
+        url_data = {}
+        for site in found_sites:
+            cn_name, url = site.split('：')
+            if cn_name in site_mappings:
+                url_data[site_mappings[cn_name]] = url.strip()
+
+        return url_data
 
     except Exception as e:
-        print(f"❌ URL同步过程中出现错误：{str(e)}")
-        raise
+        print(f"处理URL数据时出错：{str(e)}")
+        return None
 
 if __name__ == "__main__":
-    main()
+    # 从标准输入读取API内容
+    import sys
+    api_content = sys.stdin.read()
+    result = get_urls(api_content)
+    if result:
+        # 将结果输出到标准输出
+        print(json.dumps(result, ensure_ascii=False, indent=2))
