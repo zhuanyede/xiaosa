@@ -16,19 +16,15 @@ TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
 WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 
 # 文件路径定义
-REPO_ROOT = os.path.dirname(os.path.abspath(__file__))  # 获取脚本所在目录(仓库根目录)
-
-# 打印当前工作目录和脚本位置，用于调试
-print(f"当前工作目录: {os.getcwd()}")
-print(f"脚本位置: {REPO_ROOT}")
+REPO_ROOT = os.getcwd()  # 使用当前工作目录作为根目录
+print(f"当前工作目录 (REPO_ROOT): {REPO_ROOT}")
 
 # 构建文件路径
-api_path = os.path.join(REPO_ROOT, 'TVBoxOSC/tvbox/api.json')
+api_path = os.path.join(REPO_ROOT, 'TVBoxOSC', 'tvbox', 'api.json')
 url_json_path = os.path.join(REPO_ROOT, 'url.json')
 
-# 验证文件路径
-print(f"API文件路径: {api_path}")
-print(f"URL JSON将保存到: {url_json_path}")
+print(f"API 文件路径: {api_path}")
+print(f"URL JSON 将保存到: {url_json_path}")
 
 def get_mogg_domains_from_telegram():
     """从Telegram频道获取木偶域名列表"""
