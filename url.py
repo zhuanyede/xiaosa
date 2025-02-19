@@ -16,7 +16,7 @@ WOGG_DEFAULT_URL = "https://wogg.xxooo.cf"
 TELEGRAM_MOGG_URL = "https://t.me/ucpanpan/2014"
 XJS_SOURCE_URL = "https://mlink.cc/520TV"
 
-# 原有的站点映射关系
+# 站点映射关系
 site_mappings = {
     '立播': 'libo',
     '闪电': 'shandian',
@@ -50,34 +50,46 @@ buye_mappings = {
     '星剧社': 'star2'
 }
 
-def save_url_data(new_data, filename='url.json'):
-    """保存 URL 数据到文件，如果新数据为空则保持原文件不变"""
-    if not new_data:
-        print(f"没有新的有效数据，保持 {filename} 不变")
+def save_url_data(url_data, buye_data):
+    """保存 URL 数据到两个文件"""
+    if not url_data:
+        print("没有新的有效数据，保持文件不变")
         return True
         
     try:
         # 读取现有文件
-        existing_data = {}
-        if os.path.exists(filename):
-            with open(filename, 'r', encoding='utf-8') as f:
-                existing_data = json.load(f)
+        existing_url_data = {}
+        existing_buye_data = {}
         
-        # 确保新数据中至少有一个特殊站点（木偶，玩偶，星剧社）的链接
-        special_sites = {'mogg', 'muo', 'wogg', 'star2'}
-        has_special_site = any(site in new_data for site in special_sites)
+        if os.path.exists('url.json'):
+            with open('url.json', 'r', encoding='utf-8') as f:
+                existing_url_data = json.load(f)
+                
+        if os.path.exists('buye.json'):
+            with open('buye.json', 'r', encoding='utf-8') as f:
+                existing_buye_data = json.load(f)
         
-        if not has_special_site:
-            print(f"新数据中缺少特殊站点链接，保持 {filename} 不变")
+        # 检查特殊站点
+        special_sites = {'mogg', 'wogg', 'star2'}
+        has_special_sites = any(site in url_data for site in special_sites)
+        
+        if not has_special_sites:
+            print("新数据中缺少特殊站点链接，保持文件不变")
             return True
             
-        # 合并数据，新数据覆盖旧数据
-        merged_data = {**existing_data, **new_data}
+        # 合并数据
+        merged_url_data = {**existing_url_data, **url_data}
+        merged_buye_data = {**existing_buye_data, **buye_data}
         
         # 写入文件
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(merged_data, f, ensure_ascii=False, indent=2)
-        print(f"成功更新 {len(merged_data)} 个链接到 {filename}")
+        with open('url.json', 'w', encoding='utf-8') as f:
+            json.dump(merged_url_data, f, ensure_ascii=False, indent=2)
+        print(f"成功更新 {len(merged_url_data)} 个链接到 url.json")
+        
+        with open('buye.json', 'w', encoding='utf-8') as f:
+            json.dump(merged_buye_data, f, ensure_ascii=False, indent=2)
+        print(f"成功更新 {len(merged_buye_data)} 个链接到 buye.json")
+        
         return True
     except Exception as e:
         print(f"保存 URL 数据失败: {str(e)}")
@@ -195,8 +207,8 @@ def get_mogg_url(original_url=None):
     
     return original_url
 
-def process_yuan_data(mapping):
-    """从 yuan.json 处理站点信息"""
+def process_yuan_data():
+    """从 yuan.json 处理站点信息，返回基础URL数据"""
     url_data = {}
     try:
         if not os.path.exists('yuan.json'):
@@ -206,10 +218,10 @@ def process_yuan_data(mapping):
         with open('yuan.json', 'r', encoding='utf-8') as f:
             yuan_data = json.load(f)
             
-        for cn_name, en_name in mapping.items():
-            if cn_name not in ['木偶', '玩偶', '星剧社'] and cn_name in yuan_data:
+        for cn_name in yuan_data:
+            if cn_name not in ['木偶', '玩偶', '星剧社']:
                 urls = yuan_data[cn_name]
-                if urls:  # 确保有数据
+                if urls:
                     if isinstance(urls, list) and len(urls) > 1:
                         # 多个链接时才进行测试
                         best_url = get_best_url(urls)
@@ -218,8 +230,8 @@ def process_yuan_data(mapping):
                         best_url = urls[0] if isinstance(urls, list) else urls
                         
                     if best_url:
-                        url_data[en_name] = best_url.strip()
-                        print(f"从 yuan.json 添加 {cn_name} 链接 ({en_name}): {best_url}")
+                        url_data[cn_name] = best_url.strip()
+                        print(f"从 yuan.json 添加 {cn_name} 链接: {best_url}")
                     
     except Exception as e:
         print(f"处理 yuan.json 数据出错: {str(e)}")
@@ -240,51 +252,41 @@ def main():
             except Exception as e:
                 print(f"读取现有 url.json 失败: {str(e)}")
 
-        # 为两种映射分别获取数据
+        # 获取所有基础链接
         url_data = {}
         buye_data = {}
+        base_data = {}
         
         # 获取星剧社链接
         xjs_url = get_xjs_url()
         if xjs_url:
-            url_data['star2'] = xjs_url
-            buye_data['star2'] = xjs_url
+            base_data['星剧社'] = xjs_url
             print(f"添加星剧社链接: {xjs_url}")
         
         # 获取玩偶链接
         wogg_url = get_wogg_url()
         if wogg_url:
-            url_data['wogg'] = wogg_url
-            buye_data['wogg'] = wogg_url
+            base_data['玩偶'] = wogg_url
             print(f"添加玩偶链接: {wogg_url}")
         
         # 获取木偶链接
         mogg_url = get_mogg_url(existing_urls.get('mogg'))
         if mogg_url:
-            url_data['mogg'] = mogg_url
-            buye_data['muo'] = mogg_url
+            base_data['木偶'] = mogg_url
             print(f"添加木偶链接: {mogg_url}")
 
-        # 从 yuan.json 处理其他站点
-        url_data.update(process_yuan_data(site_mappings))
-        buye_data.update(process_yuan_data(buye_mappings))
+        # 获取其他站点数据
+        base_data.update(process_yuan_data())
 
-        # 检查是否获取到了必要的链接
-        special_sites = {'mogg', 'wogg', 'star2'}
-        has_special_sites = any(site in url_data for site in special_sites)
-        
-        if not has_special_sites:
-            print("未获取到特殊站点（木偶、玩偶、星剧社）的链接，保持文件不变")
-            return True
+        # 将基础数据映射到两种不同的格式
+        for cn_name, url in base_data.items():
+            if cn_name in site_mappings:
+                url_data[site_mappings[cn_name]] = url
+            if cn_name in buye_mappings:
+                buye_data[buye_mappings[cn_name]] = url
 
-        # 保存两个文件
-        success = True
-        if url_data:
-            success &= save_url_data(url_data, 'url.json')
-        if buye_data:
-            success &= save_url_data(buye_data, 'buye.json')
-            
-        return success
+        # 保存到两个文件
+        return save_url_data(url_data, buye_data)
 
     except Exception as e:
         print(f"更新过程出错: {str(e)}")
