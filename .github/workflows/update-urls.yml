@@ -34,6 +34,6 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add url.json
-          git commit -m "更新 url.json" || echo "No changes to commit"
+          git add url.json buye.json
+          git commit -m "更新 url.json 和 buye.json" || echo "No changes to commit"
           git push
