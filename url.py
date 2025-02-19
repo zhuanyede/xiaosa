@@ -50,12 +50,34 @@ buye_mappings = {
     '星剧社': 'star2'
 }
 
-def save_url_data(url_data, filename='url.json'):
-    """保存 URL 数据到文件"""
+def save_url_data(new_data, filename='url.json'):
+    """保存 URL 数据到文件，如果新数据为空则保持原文件不变"""
+    if not new_data:
+        print(f"没有新的有效数据，保持 {filename} 不变")
+        return True
+        
     try:
+        # 读取现有文件
+        existing_data = {}
+        if os.path.exists(filename):
+            with open(filename, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        
+        # 确保新数据中至少有一个特殊站点（木偶，玩偶，星剧社）的链接
+        special_sites = {'mogg', 'muo', 'wogg', 'star2'}
+        has_special_site = any(site in new_data for site in special_sites)
+        
+        if not has_special_site:
+            print(f"新数据中缺少特殊站点链接，保持 {filename} 不变")
+            return True
+            
+        # 合并数据，新数据覆盖旧数据
+        merged_data = {**existing_data, **new_data}
+        
+        # 写入文件
         with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(url_data, f, ensure_ascii=False, indent=2)
-        print(f"成功保存 {len(url_data)} 个链接到 {filename}")
+            json.dump(merged_data, f, ensure_ascii=False, indent=2)
+        print(f"成功更新 {len(merged_data)} 个链接到 {filename}")
         return True
     except Exception as e:
         print(f"保存 URL 数据失败: {str(e)}")
@@ -71,6 +93,26 @@ def test_url_delay(url):
         return None
     except:
         return None
+
+def get_best_url(urls):
+    """从多个URL中选择最佳的一个"""
+    if not isinstance(urls, list):
+        return urls  # 如果是单个链接，直接返回
+    
+    if len(urls) == 1:
+        return urls[0].strip()  # 如果数组只有一个链接，直接返回
+    
+    # 对多个链接进行测试
+    valid_urls = []
+    for url in urls:
+        delay = test_url_delay(url.strip())
+        if delay is not None:
+            valid_urls.append((url.strip(), delay))
+    
+    if valid_urls:
+        # 按延迟时间排序，返回延迟最小的URL
+        return sorted(valid_urls, key=lambda x: x[1])[0][0]
+    return None  # 如果所有链接都测试失败，返回 None
 
 def get_xjs_url():
     """从源站获取星剧社链接"""
@@ -115,31 +157,16 @@ def get_wogg_url():
                     domains.extend(re.findall(pattern, notice_match.group(1)))
 
             domains = list(dict.fromkeys(domains))
-            print("找到玩偶域名:", domains)
-
             if domains:
-                best_url = min(
-                    (url for domain in domains for url in [f"https://{domain.strip('/')}"]
-                     if (delay := test_url_delay(url)) is not None),
-                    key=lambda url: test_url_delay(url),
-                    default=initial_url
-                )
-                return best_url
+                urls = [f"https://{domain.strip('/')}" for domain in domains]
+                best_url = get_best_url(urls)
+                if best_url:
+                    return best_url
 
     except Exception as e:
         print(f"获取玩偶链接出错: {str(e)}")
         
-    initial_delay = test_url_delay(initial_url)
-    default_delay = test_url_delay(WOGG_DEFAULT_URL)
-    
-    if initial_delay and default_delay:
-        return initial_url if initial_delay < default_delay else WOGG_DEFAULT_URL
-    elif initial_delay:
-        return initial_url
-    elif default_delay:
-        return WOGG_DEFAULT_URL
-    
-    return WOGG_DEFAULT_URL
+    return get_best_url([initial_url, WOGG_DEFAULT_URL])
 
 def get_mogg_url(original_url=None):
     """获取木偶链接"""
@@ -158,39 +185,45 @@ def get_mogg_url(original_url=None):
 
             domains = list(dict.fromkeys(domains))
             if domains:
-                print("找到木偶域名:", domains)
-                
-                for domain in domains:
-                    url = f"https://{domain}"
-                    try:
-                        response = requests.get(url, timeout=3, verify=False)
-                        if response.status_code == 200 and ('木偶' in response.text or '影视' in response.text):
-                            print(f"找到可用的木偶域名: {url}")
-                            return url
-                    except Exception:
-                        continue
+                urls = [f"https://{domain}" for domain in domains]
+                best_url = get_best_url(urls)
+                if best_url:
+                    return best_url
 
     except Exception as e:
         print(f"获取木偶链接出错: {str(e)}")
     
     return original_url
 
-def process_api_sites(api_data, mapping):
-    """处理 API 数据中的站点信息"""
+def process_yuan_data(mapping):
+    """从 yuan.json 处理站点信息"""
     url_data = {}
-    
-    for site in api_data.get('sites', []):
-        name = site.get('name', '')
-        if '弹幕' in name:
-            for cn_name, en_name in mapping.items():
-                if cn_name in name and cn_name not in ['木偶', '玩偶', '星剧社']:
-                    ext = site.get('ext', {})
-                    site_url = ext.get('site', '') if isinstance(ext, dict) else ext
-                    if site_url and site_url.startswith('http'):
-                        url_data[en_name] = site_url.strip()
-                        print(f"添加 {cn_name} 链接 ({en_name}): {site_url}")
-                    break
-    
+    try:
+        if not os.path.exists('yuan.json'):
+            print("警告: yuan.json 文件不存在")
+            return url_data
+            
+        with open('yuan.json', 'r', encoding='utf-8') as f:
+            yuan_data = json.load(f)
+            
+        for cn_name, en_name in mapping.items():
+            if cn_name not in ['木偶', '玩偶', '星剧社'] and cn_name in yuan_data:
+                urls = yuan_data[cn_name]
+                if urls:  # 确保有数据
+                    if isinstance(urls, list) and len(urls) > 1:
+                        # 多个链接时才进行测试
+                        best_url = get_best_url(urls)
+                    else:
+                        # 单个链接直接使用
+                        best_url = urls[0] if isinstance(urls, list) else urls
+                        
+                    if best_url:
+                        url_data[en_name] = best_url.strip()
+                        print(f"从 yuan.json 添加 {cn_name} 链接 ({en_name}): {best_url}")
+                    
+    except Exception as e:
+        print(f"处理 yuan.json 数据出错: {str(e)}")
+        
     return url_data
 
 def main():
@@ -206,15 +239,6 @@ def main():
                     existing_urls = json.load(f)
             except Exception as e:
                 print(f"读取现有 url.json 失败: {str(e)}")
-        
-        # 读取API文件
-        api_path = 'TVBoxOSC/tvbox/api.json'
-        if not os.path.exists(api_path):
-            print(f"错误: 找不到 API 文件: {api_path}")
-            return False
-            
-        with open(api_path, 'r', encoding='utf-8') as f:
-            api_data = json.load(f)
 
         # 为两种映射分别获取数据
         url_data = {}
@@ -238,12 +262,20 @@ def main():
         mogg_url = get_mogg_url(existing_urls.get('mogg'))
         if mogg_url:
             url_data['mogg'] = mogg_url
-            buye_data['muo'] = mogg_url  # 注意这里使用新的映射名
+            buye_data['muo'] = mogg_url
             print(f"添加木偶链接: {mogg_url}")
 
-        # 处理其他站点 - 使用不同的映射
-        url_data.update(process_api_sites(api_data, site_mappings))
-        buye_data.update(process_api_sites(api_data, buye_mappings))
+        # 从 yuan.json 处理其他站点
+        url_data.update(process_yuan_data(site_mappings))
+        buye_data.update(process_yuan_data(buye_mappings))
+
+        # 检查是否获取到了必要的链接
+        special_sites = {'mogg', 'wogg', 'star2'}
+        has_special_sites = any(site in url_data for site in special_sites)
+        
+        if not has_special_sites:
+            print("未获取到特殊站点（木偶、玩偶、星剧社）的链接，保持文件不变")
+            return True
 
         # 保存两个文件
         success = True
@@ -251,10 +283,6 @@ def main():
             success &= save_url_data(url_data, 'url.json')
         if buye_data:
             success &= save_url_data(buye_data, 'buye.json')
-            
-        if not (url_data or buye_data):
-            print("未找到任何有效链接")
-            return False
             
         return success
 
