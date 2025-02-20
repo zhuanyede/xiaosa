@@ -182,6 +182,22 @@ def get_wogg_url():
 
 def get_mogg_url(original_url=None):
     """获取木偶链接"""
+    # 从 yuan.json 获取木偶链接
+    try:
+        if os.path.exists('yuan.json'):
+            with open('yuan.json', 'r', encoding='utf-8') as f:
+                yuan_data = json.load(f)
+                if '木偶' in yuan_data and yuan_data['木偶']:
+                    urls = yuan_data['木偶'] if isinstance(yuan_data['木偶'], list) else [yuan_data['木偶']]
+                    best_url = get_best_url(urls)
+                    if best_url:
+                        print(f"从 yuan.json 获取到木偶链接: {best_url}")
+                        return best_url
+    except Exception as e:
+        print(f"从 yuan.json 获取木偶链接出错: {str(e)}")
+
+    # 以下是原始从 Telegram 获取链接的代码（已注释）
+    """
     try:
         response = requests.get(TELEGRAM_MOGG_URL, timeout=10, verify=False)
         if response.status_code == 200:
@@ -204,6 +220,7 @@ def get_mogg_url(original_url=None):
 
     except Exception as e:
         print(f"获取木偶链接出错: {str(e)}")
+    """
     
     return original_url
 
@@ -219,7 +236,7 @@ def process_yuan_data():
             yuan_data = json.load(f)
             
         for cn_name in yuan_data:
-            if cn_name not in ['木偶', '玩偶', '星剧社']:
+            if cn_name not in ['玩偶', '星剧社']:  # 移除了木偶，因为现在在专门的函数中处理
                 urls = yuan_data[cn_name]
                 if urls:
                     if isinstance(urls, list) and len(urls) > 1:
