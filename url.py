@@ -4,6 +4,7 @@ import time
 import os
 import requests
 import warnings
+import re
 from urllib3.exceptions import InsecureRequestWarning
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -66,6 +67,20 @@ def get_best_url(urls):
     
     return None
 
+def get_star2_real_url(source_url):
+    """从源站获取星剧社真实链接"""
+    try:
+        response = requests.get(source_url, timeout=5, verify=False)
+        if response.status_code == 200:
+            match = re.search(r'https?://[^"\'\s<>]+?star2\.cn[^"\'\s<>]*', response.text)
+            if match:
+                real_url = match.group(0).strip()
+                print(f"从源站获取到星剧社真实链接: {real_url}")
+                return real_url
+    except Exception as e:
+        print(f"获取星剧社真实链接失败: {str(e)}")
+    return None
+
 def process_urls(existing_urls):
     """处理所有URL数据"""
     url_data = {}
@@ -83,13 +98,26 @@ def process_urls(existing_urls):
         base_data = {}
         for cn_name, urls in yuan_data.items():
             if urls:
-                best_url = get_best_url(urls if isinstance(urls, list) else [urls])
-                if best_url:
-                    base_data[cn_name] = best_url
-                    print(f"添加 {cn_name} 链接: {best_url}")
-                elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
-                    base_data[cn_name] = existing_urls[site_mappings[cn_name]]
-                    print(f"保持 {cn_name} 原有链接")
+                if cn_name == '星剧社':
+                    # 特殊处理星剧社链接
+                    source_url = get_best_url(urls if isinstance(urls, list) else [urls])
+                    if source_url:
+                        real_url = get_star2_real_url(source_url)
+                        if real_url:
+                            base_data[cn_name] = real_url
+                            print(f"添加 {cn_name} 链接: {real_url}")
+                        elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
+                            base_data[cn_name] = existing_urls[site_mappings[cn_name]]
+                            print(f"保持 {cn_name} 原有链接")
+                else:
+                    # 处理其他站点链接
+                    best_url = get_best_url(urls if isinstance(urls, list) else [urls])
+                    if best_url:
+                        base_data[cn_name] = best_url
+                        print(f"添加 {cn_name} 链接: {best_url}")
+                    elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
+                        base_data[cn_name] = existing_urls[site_mappings[cn_name]]
+                        print(f"保持 {cn_name} 原有链接")
         
         # 映射到两种格式
         for cn_name, url in base_data.items():
