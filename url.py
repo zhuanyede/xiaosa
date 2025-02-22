@@ -9,7 +9,6 @@ from urllib3.exceptions import InsecureRequestWarning
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
-# 站点映射关系
 site_mappings = {
     '立播': 'libo',
     '闪电': 'shandian',
@@ -43,7 +42,6 @@ buye_mappings = {
 }
 
 def test_url(url):
-    """测试URL是否可用"""
     try:
         response = requests.get(url.strip(), timeout=5, verify=False)
         return response.status_code == 200
@@ -51,26 +49,23 @@ def test_url(url):
         return False
 
 def get_best_url(urls):
-    """从多个URL中选择最佳的一个"""
-    # 如果不是列表，直接返回
     if not isinstance(urls, list):
         return urls.strip()
     
-    # 如果只有一个链接，直接返回
     if len(urls) == 1:
         return urls[0].strip()
     
-    # 多个链接时，每次测试两个
+    default_url = urls[0].strip()
+    
     for i in range(0, len(urls), 2):
         test_urls = urls[i:i+2]
         for url in test_urls:
             if test_url(url):
                 return url.strip()
     
-    return None
+    return default_url
 
 def get_star2_real_url(source_url):
-    """从源站获取星剧社真实链接"""
     try:
         response = requests.get(source_url, timeout=5, verify=False)
         if response.status_code == 200:
@@ -84,7 +79,6 @@ def get_star2_real_url(source_url):
     return None
 
 def process_urls(existing_urls):
-    """处理所有URL数据"""
     url_data = {}
     buye_data = {}
     
@@ -96,12 +90,10 @@ def process_urls(existing_urls):
         with open('yuan.json', 'r', encoding='utf-8') as f:
             yuan_data = json.load(f)
             
-        # 处理所有站点链接
         base_data = {}
         for cn_name, urls in yuan_data.items():
             if urls:
                 if cn_name == '星剧社':
-                    # 特殊处理星剧社链接
                     source_url = get_best_url(urls if isinstance(urls, list) else [urls])
                     if source_url:
                         real_url = get_star2_real_url(source_url)
@@ -112,7 +104,6 @@ def process_urls(existing_urls):
                             base_data[cn_name] = existing_urls[site_mappings[cn_name]]
                             print(f"保持 {cn_name} 原有链接")
                 else:
-                    # 处理其他站点链接
                     best_url = get_best_url(urls if isinstance(urls, list) else [urls])
                     if best_url:
                         base_data[cn_name] = best_url
@@ -121,7 +112,6 @@ def process_urls(existing_urls):
                         base_data[cn_name] = existing_urls[site_mappings[cn_name]]
                         print(f"保持 {cn_name} 原有链接")
         
-        # 映射到两种格式
         for cn_name, url in base_data.items():
             if cn_name in site_mappings:
                 url_data[site_mappings[cn_name]] = url
@@ -129,7 +119,6 @@ def process_urls(existing_urls):
                 buye_data[buye_mappings[cn_name]] = url
         
         if url_data:
-            # 保存文件
             with open('url.json', 'w', encoding='utf-8') as f:
                 json.dump(url_data, f, ensure_ascii=False, indent=2)
             with open('buye.json', 'w', encoding='utf-8') as f:
@@ -145,10 +134,8 @@ def process_urls(existing_urls):
         return False
 
 def main():
-    """主函数"""
     print("开始更新 URL...")
     
-    # 读取现有的 url.json
     existing_urls = {}
     try:
         if os.path.exists('url.json'):
@@ -157,7 +144,6 @@ def main():
     except Exception as e:
         print(f"读取 url.json 失败: {str(e)}")
 
-    # 处理并保存URL
     if process_urls(existing_urls):
         print("更新完成")
     else:
