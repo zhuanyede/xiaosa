@@ -52,13 +52,15 @@ def test_url(url):
 
 def get_best_url(urls):
     """从多个URL中选择最佳的一个"""
+    # 如果不是列表，直接返回
     if not isinstance(urls, list):
-        return urls
+        return urls.strip()
     
+    # 如果只有一个链接，直接返回
     if len(urls) == 1:
         return urls[0].strip()
     
-    # 每次测试两个链接
+    # 多个链接时，每次测试两个
     for i in range(0, len(urls), 2):
         test_urls = urls[i:i+2]
         for url in test_urls:
