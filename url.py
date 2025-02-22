@@ -8,7 +8,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
-# 站点映射关系保持不变
+# 站点映射关系
 site_mappings = {
     '立播': 'libo',
     '闪电': 'shandian',
@@ -42,38 +42,38 @@ buye_mappings = {
 }
 
 def test_url(url):
-    """
-    测试URL是否可用
-    只要有任何异常或非200响应，都视为不可用
-    """
+    """测试URL是否可用"""
     try:
-        response = requests.get(
+        # 仅发送HEAD请求检查可访问性，超时设置为3秒
+        response = requests.head(
             url.strip(),
-            timeout=5,
-            verify=False
+            timeout=3,
+            verify=False,
+            allow_redirects=True  # 允许重定向
         )
-        # 严格要求状态码为200
-        if response.status_code == 200:
-            print(f"URL {url} 测试成功 (200 OK)")
+        
+        # 检查状态码，2xx表示成功
+        if 200 <= response.status_code < 300:
+            print(f"URL {url} 可用 (状态码: {response.status_code})")
             return True
         else:
-            print(f"URL {url} 测试失败 (状态码: {response.status_code})")
+            print(f"URL {url} 不可用 (状态码: {response.status_code})")
             return False
+            
     except Exception as e:
-        print(f"URL {url} 测试失败 (错误: {str(e)})")
+        print(f"URL {url} 访问失败: {str(e)}")
         return False
 
 def get_best_url(urls):
-    """从多个URL中选择第一个可用的URL"""
+    """从多个URL中选择可用的URL"""
     if not isinstance(urls, list):
         urls = [urls]
     
     for url in urls:
-        print(f"\n正在测试URL: {url}")
+        print(f"\n测试URL: {url}")
         if test_url(url):
             return url.strip()
     
-    print("没有找到可用的URL")
     return None
 
 def process_urls(existing_urls):
@@ -86,7 +86,7 @@ def process_urls(existing_urls):
         with open('yuan.json', 'r', encoding='utf-8') as f:
             yuan_data = json.load(f)
             
-        # 用于存储最终结果
+        # 存储结果
         url_data = {}
         buye_data = {}
         base_data = {}
@@ -97,15 +97,14 @@ def process_urls(existing_urls):
             if not urls:
                 continue
                 
-            # 获取可用的URL
+            # 获取可用URL
             best_url = get_best_url(urls if isinstance(urls, list) else [urls])
             
             if best_url:
-                # 有可用URL，使用新的URL
                 base_data[cn_name] = best_url
                 print(f"使用新URL: {best_url}")
             elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
-                # 测试现有URL是否可用
+                # 测试现有URL
                 existing_url = existing_urls[site_mappings[cn_name]]
                 print(f"测试现有URL: {existing_url}")
                 if test_url(existing_url):
