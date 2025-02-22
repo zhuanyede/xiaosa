@@ -4,6 +4,7 @@ import time
 import os
 import requests
 import warnings
+import re
 from urllib3.exceptions import InsecureRequestWarning
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -44,40 +45,47 @@ buye_mappings = {
 def test_url(url):
     """测试URL是否可用"""
     try:
-        # 仅发送HEAD请求检查可访问性，超时设置为3秒
-        response = requests.head(
-            url.strip(),
-            timeout=3,
-            verify=False,
-            allow_redirects=True  # 允许重定向
-        )
-        
-        # 检查状态码，2xx表示成功
-        if 200 <= response.status_code < 300:
-            print(f"URL {url} 可用 (状态码: {response.status_code})")
-            return True
-        else:
-            print(f"URL {url} 不可用 (状态码: {response.status_code})")
-            return False
-            
-    except Exception as e:
-        print(f"URL {url} 访问失败: {str(e)}")
+        response = requests.get(url.strip(), timeout=5, verify=False)
+        return response.status_code == 200
+    except:
         return False
 
 def get_best_url(urls):
-    """从多个URL中选择可用的URL"""
+    """从多个URL中选择最佳的一个"""
     if not isinstance(urls, list):
-        urls = [urls]
+        return urls
     
-    for url in urls:
-        print(f"\n测试URL: {url}")
-        if test_url(url):
-            return url.strip()
+    if len(urls) == 1:
+        return urls[0].strip()
     
+    # 每次测试两个链接
+    for i in range(0, len(urls), 2):
+        test_urls = urls[i:i+2]
+        for url in test_urls:
+            if test_url(url):
+                return url.strip()
+    
+    return None
+
+def get_star2_real_url(source_url):
+    """从源站获取星剧社真实链接"""
+    try:
+        response = requests.get(source_url, timeout=5, verify=False)
+        if response.status_code == 200:
+            match = re.search(r'https?://[^"\'\s<>]+?star2\.cn[^"\'\s<>]*', response.text)
+            if match:
+                real_url = match.group(0).strip()
+                print(f"从源站获取到星剧社真实链接: {real_url}")
+                return real_url
+    except Exception as e:
+        print(f"获取星剧社真实链接失败: {str(e)}")
     return None
 
 def process_urls(existing_urls):
     """处理所有URL数据"""
+    url_data = {}
+    buye_data = {}
+    
     try:
         if not os.path.exists('yuan.json'):
             print("yuan.json 文件不存在")
@@ -86,34 +94,30 @@ def process_urls(existing_urls):
         with open('yuan.json', 'r', encoding='utf-8') as f:
             yuan_data = json.load(f)
             
-        # 存储结果
-        url_data = {}
-        buye_data = {}
+        # 处理所有站点链接
         base_data = {}
-        
-        # 处理每个站点
         for cn_name, urls in yuan_data.items():
-            print(f"\n处理 {cn_name} 的URL...")
-            if not urls:
-                continue
-                
-            # 获取可用URL
-            best_url = get_best_url(urls if isinstance(urls, list) else [urls])
-            
-            if best_url:
-                base_data[cn_name] = best_url
-                print(f"使用新URL: {best_url}")
-            elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
-                # 测试现有URL
-                existing_url = existing_urls[site_mappings[cn_name]]
-                print(f"测试现有URL: {existing_url}")
-                if test_url(existing_url):
-                    base_data[cn_name] = existing_url
-                    print(f"保留现有URL: {existing_url}")
+            if urls:
+                if cn_name == '星剧社':
+                    # 特殊处理星剧社链接
+                    source_url = get_best_url(urls if isinstance(urls, list) else [urls])
+                    if source_url:
+                        real_url = get_star2_real_url(source_url)
+                        if real_url:
+                            base_data[cn_name] = real_url
+                            print(f"添加 {cn_name} 链接: {real_url}")
+                        elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
+                            base_data[cn_name] = existing_urls[site_mappings[cn_name]]
+                            print(f"保持 {cn_name} 原有链接")
                 else:
-                    print(f"现有URL已失效，跳过 {cn_name}")
-            else:
-                print(f"没有可用URL，跳过 {cn_name}")
+                    # 处理其他站点链接
+                    best_url = get_best_url(urls if isinstance(urls, list) else [urls])
+                    if best_url:
+                        base_data[cn_name] = best_url
+                        print(f"添加 {cn_name} 链接: {best_url}")
+                    elif cn_name in site_mappings and site_mappings[cn_name] in existing_urls:
+                        base_data[cn_name] = existing_urls[site_mappings[cn_name]]
+                        print(f"保持 {cn_name} 原有链接")
         
         # 映射到两种格式
         for cn_name, url in base_data.items():
@@ -123,19 +127,15 @@ def process_urls(existing_urls):
                 buye_data[buye_mappings[cn_name]] = url
         
         if url_data:
-            # 显示将要保存的内容
-            print("\n将要保存的 url.json 内容:")
-            print(json.dumps(url_data, ensure_ascii=False, indent=2))
-            
             # 保存文件
             with open('url.json', 'w', encoding='utf-8') as f:
                 json.dump(url_data, f, ensure_ascii=False, indent=2)
             with open('buye.json', 'w', encoding='utf-8') as f:
                 json.dump(buye_data, f, ensure_ascii=False, indent=2)
-            print("文件更新成功")
+            print(f"成功更新 url.json 和 buye.json")
             return True
         
-        print("没有可用的URL数据")
+        print("没有新的有效数据")
         return False
         
     except Exception as e:
@@ -152,8 +152,6 @@ def main():
         if os.path.exists('url.json'):
             with open('url.json', 'r', encoding='utf-8') as f:
                 existing_urls = json.load(f)
-                print("\n当前的 url.json 内容:")
-                print(json.dumps(existing_urls, ensure_ascii=False, indent=2))
     except Exception as e:
         print(f"读取 url.json 失败: {str(e)}")
 
@@ -161,7 +159,7 @@ def main():
     if process_urls(existing_urls):
         print("更新完成")
     else:
-        print("更新失败")
+        print("更新失败，保持文件不变")
 
 if __name__ == "__main__":
     main()
