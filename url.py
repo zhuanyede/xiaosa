@@ -23,7 +23,7 @@ site_mappings = {
     '下饭': 'xiafan',
     '玩偶': 'wogg',
     '星剧社': 'star2',
-    '小二': 'xiaoer'
+    '二小': 'erxiao'
 }
 
 buye_mappings = {
@@ -40,7 +40,7 @@ buye_mappings = {
     '下饭': 'xiaf',
     '玩偶': 'wogg',
     '星剧社': 'star2',
-    '小二': 'xiaoer'
+    '二小': 'erxiao'
 }
 
 def test_url(url):
