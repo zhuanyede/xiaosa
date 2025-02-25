@@ -22,7 +22,7 @@ site_mappings = {
     '虎斑': 'huban',
     '下饭': 'xiafan',
     '玩偶': 'wogg',
-    '星剧社': 'star2'
+    '星剧社': 'star2',
     '小二': 'xiaoai'
 }
 
@@ -39,7 +39,7 @@ buye_mappings = {
     '虎斑': 'hub',
     '下饭': 'xiaf',
     '玩偶': 'wogg',
-    '星剧社': 'star2'
+    '星剧社': 'star2',
     '小二': 'xiaoai'
 }
 
