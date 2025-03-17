@@ -23,7 +23,9 @@ site_mappings = {
     '下饭': 'xiafan',
     '玩偶': 'wogg',
     '星剧社': 'star2',
-    '二小': 'erxiao'
+    '二小': 'erxiao',
+    '大玩ou': 'dawanou',
+    '玩偶叔叔': 'woss'
 }
 
 buye_mappings = {
@@ -40,7 +42,9 @@ buye_mappings = {
     '下饭': 'xiaf',
     '玩偶': 'wogg',
     '星剧社': 'star2',
-    '二小': 'erxiao'
+    '二小': 'erxiao',
+    '大玩ou': 'dawanou',
+    '玩偶叔叔': 'woss'
 }
 
 def test_url(url):
