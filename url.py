@@ -25,7 +25,8 @@ site_mappings = {
     '星剧社': 'star2',
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
-    '玩偶叔叔': 'woss'
+    '玩偶叔叔': 'woss',
+    '百家影音': 'baijia'
 }
 
 buye_mappings = {
@@ -44,7 +45,8 @@ buye_mappings = {
     '星剧社': 'star2',
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
-    '玩偶叔叔': 'woss'
+    '玩偶叔叔': 'woss',
+    '百家影音': 'baijia'
 }
 
 def test_url(url):
