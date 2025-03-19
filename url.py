@@ -11,14 +11,12 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 site_mappings = {
     '立播': 'libo',
-    '闪电': 'shandian',
     '欧哥': 'ouge',
     '小米': 'xiaomi',
     '多多': 'duoduo',
     '蜡笔': 'labi',
     '至臻': 'zhizhen',
     '木偶': 'mogg',
-    '六趣': 'liuqu',
     '虎斑': 'huban',
     '下饭': 'xiafan',
     '玩偶': 'wogg',
@@ -26,20 +24,17 @@ site_mappings = {
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
     '玩偶叔叔': 'woss',
-    '百家影音': 'baijia',
-    '采个哥哥': 'cwogg'
+    '百家影音': 'baijia'
 }
 
 buye_mappings = {
     '立播': 'libo',
-    '闪电': 'sd',
     '欧哥': 'ouge',
     '小米': 'xmi',
     '多多': 'duo',
     '蜡笔': 'labi',
     '至臻': 'zhiz',
     '木偶': 'muo',
-    '六趣': 'liuq',
     '虎斑': 'hub',
     '下饭': 'xiaf',
     '玩偶': 'wogg',
@@ -47,8 +42,7 @@ buye_mappings = {
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
     '玩偶叔叔': 'woss',
-    '百家影音': 'baijia',
-    '采个哥哥': 'cwogg'
+    '百家影音': 'baijia'
 }
 
 def test_url(url):
