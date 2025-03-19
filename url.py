@@ -26,7 +26,8 @@ site_mappings = {
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
     '玩偶叔叔': 'woss',
-    '百家影音': 'baijia'
+    '百家影音': 'baijia',
+    '采个哥哥': 'cwogg'
 }
 
 buye_mappings = {
@@ -46,7 +47,8 @@ buye_mappings = {
     '二小': 'erxiao',
     '大玩ou': 'dawanou',
     '玩偶叔叔': 'woss',
-    '百家影音': 'baijia'
+    '百家影音': 'baijia',
+    '采个哥哥': 'cwogg'
 }
 
 def test_url(url):
